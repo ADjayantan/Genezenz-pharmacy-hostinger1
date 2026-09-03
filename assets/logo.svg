@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Genezenz Pharmacy">
+  <g fill="none" stroke="#1E9E52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- G (left of the cross) -->
+    <path d="M30 22 H22 A6 6 0 0 0 16 28 V33 A6 6 0 0 0 22 39 H30 V33 H25"/>
+    <!-- P (right of the cross), stem forms the vertical bar -->
+    <path d="M34 42 V16 H44 A6 6 0 0 1 50 22 V24 A6 6 0 0 1 44 30 H34"/>
+    <path d="M34 42 V48"/>
+    <!-- cross arm ticks (top &amp; bottom) -->
+    <path d="M30 16 V12 M30 46 V50"/>
+  </g>
+</svg>

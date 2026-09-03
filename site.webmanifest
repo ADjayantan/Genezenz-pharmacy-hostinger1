@@ -1,0 +1,12 @@
+{
+  "name": "Genezenz Pharmacy",
+  "short_name": "Genezenz",
+  "description": "Online pharmacy in Coimbatore — genuine medicines, pharmacist-verified, same-day delivery.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F0E6",
+  "theme_color": "#163329",
+  "icons": [
+    { "src": "/assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
