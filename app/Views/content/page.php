@@ -1,0 +1,2 @@
+<?php declare(strict_types=1);?>
+<section class="catalogue-hero"><div class="container"><p class="rule-label"><?=e($eyebrow)?></p><h1><?=e($heading)?></h1></div></section><article class="container section-space policy-copy"><?php foreach($paragraphs as$i=>$paragraph):?><section><h2><?= $i===0?'Our approach':'Important information' ?></h2><p><?=e($paragraph)?></p></section><?php endforeach;?></article>

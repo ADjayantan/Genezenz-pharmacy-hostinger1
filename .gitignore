@@ -1,0 +1,6 @@
+.env
+private_uploads/*
+!private_uploads/.gitkeep
+!private_uploads/.htaccess
+logs/*
+!logs/.gitkeep

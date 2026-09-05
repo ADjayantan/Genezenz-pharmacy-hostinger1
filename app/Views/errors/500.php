@@ -1,0 +1,2 @@
+<?php declare(strict_types=1); ?>
+<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Temporarily unavailable</title><style>body{font:17px/1.6 system-ui;background:#F5F0E6;color:#1A2421;max-width:42rem;margin:10vh auto;padding:2rem}a{color:#163329}</style></head><body><h1>We cannot open the counter right now.</h1><p><?= e($message) ?></p><p>Please call <a href="tel:+918044560873">+91 80445 60873</a> or try again shortly.</p></body></html>

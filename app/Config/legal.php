@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+ 'privacy-policy'=>['Privacy Policy','We collect account, order, delivery and prescription information only to provide pharmacy services, meet legal duties, prevent abuse and support customers.','Prescription files are encrypted and access-controlled. We do not sell health information. Service providers receive only the minimum data needed to process hosting, communications or delivery. You may request access or correction by contacting the pharmacy; records may be retained where law requires it.'],
+ 'cookie-policy'=>['Cookie Policy','Essential cookies keep you signed in, protect forms and remember the cart. Optional analytics loads only after consent.','You can choose essential-only use in the cookie banner and clear your browser storage at any time. Blocking essential cookies can prevent account and checkout functions.'],
+ 'terms-of-service'=>['Terms of Service','The catalogue is an invitation to place an order, subject to pharmacist review, stock, price verification, service area and legal requirements.','Do not use this website for emergencies or self-diagnosis. Prescription medicines are supplied only after a valid prescription is reviewed. We may decline or contact you about an order when fulfilment would be unsafe or unlawful.'],
+ 'shipping-delivery'=>['Shipping & Delivery','Delivery timing depends on stock, prescription approval, address and operating hours. Same-day references are estimates, not guarantees.','The current free-delivery threshold is shown at checkout. Inspect the package at delivery and contact us promptly about damage or mismatch. Cold-chain products may need special handling or counter collection.'],
+ 'returns-refunds'=>['Returns & Refunds','Medicines generally cannot be returned after delivery because storage integrity cannot be verified. Exceptions may apply to wrong, damaged or expired products.','Contact the pharmacy promptly with the order number and photographs. Approved refunds are returned through the agreed payment method; delivery fees may not be refundable.'],
+ 'prescription-policy'=>['Prescription Policy','A clear, valid prescription from a registered practitioner is required for prescription-only medicines. The pharmacist may request the original or more information.','Uploads are encrypted, reviewed by authorised staff and retained according to pharmacy obligations. Approval does not guarantee stock or delivery. Never alter a prescription or use another patient’s prescription.'],
+];

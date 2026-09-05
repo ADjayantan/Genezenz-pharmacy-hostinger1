@@ -1,0 +1,11 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Core\Database;use App\Core\Env;
+
+require dirname(__DIR__).'/app/bootstrap.php';
+$db=Database::connection();$token=Env::get('META_PAGE_ACCESS_TOKEN');$version=Env::get('META_GRAPH_VERSION','v21.0');if($token==='')throw new RuntimeException('META_PAGE_ACCESS_TOKEN is missing.');
+$db->beginTransaction();$jobs=$db->query("SELECT * FROM webhook_jobs WHERE status IN ('PENDING','FAILED') AND available_at<=UTC_TIMESTAMP() AND attempts<6 ORDER BY id LIMIT 20 FOR UPDATE SKIP LOCKED")->fetchAll();$ids=array_column($jobs,'id');if($ids)$db->exec('UPDATE webhook_jobs SET status=\'PROCESSING\',locked_at=UTC_TIMESTAMP() WHERE id IN('.implode(',',array_map('intval',$ids)).')');$db->commit();
+foreach($jobs as$job){try{$url='https://graph.facebook.com/'.rawurlencode($version).'/'.rawurlencode((string)$job['external_id']).'?access_token='.rawurlencode($token);$context=stream_context_create(['http'=>['timeout'=>12,'ignore_errors'=>true]]);$raw=file_get_contents($url,false,$context);$data=is_string($raw)?json_decode($raw,true):null;if(!is_array($data)||isset($data['error']))throw new RuntimeException('Meta Graph request failed.');$fields=[];foreach($data['field_data']??[]as$field)$fields[(string)($field['name']??'')]=(string)($field['values'][0]??'');$lead=['external'=>$job['external_id'],'name'=>$fields['full_name']??$fields['name']??null,'email'=>$fields['email']??null,'phone'=>$fields['phone_number']??$fields['phone']??null,'raw'=>json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'form'=>$data['form_id']??null,'created'=>$data['created_time']??null];$s=$db->prepare("INSERT IGNORE INTO leads(source,status,name,email,phone,raw_json,external_id,form_id,created_at) VALUES('FACEBOOK','NEW',:name,:email,:phone,:raw,:external,:form,COALESCE(:created,UTC_TIMESTAMP()))");$s->execute($lead);$db->prepare("UPDATE webhook_jobs SET status='COMPLETED',attempts=attempts+1,last_error=NULL WHERE id=:id")->execute(['id'=>$job['id']]);}catch(Throwable$e){$db->prepare("UPDATE webhook_jobs SET status='FAILED',attempts=attempts+1,last_error=:error,available_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL POW(2,LEAST(attempts,5)) MINUTE) WHERE id=:id")->execute(['error'=>substr($e->getMessage(),0,1000),'id'=>$job['id']]);}}
+echo 'Processed '.count($jobs)." Meta job(s).\n";

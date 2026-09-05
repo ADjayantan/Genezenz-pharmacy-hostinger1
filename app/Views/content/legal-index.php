@@ -1,0 +1,2 @@
+<?php declare(strict_types=1);?>
+<section class="catalogue-hero"><div class="container"><p class="rule-label">Clear terms</p><h1>Legal & pharmacy policies</h1><p>How Genezenz handles orders, privacy, prescriptions and delivery.</p></div></section><section class="container section-space legal-grid"><?php foreach($policies as$slug=>$policy):?><a href="<?=app_url('/legal/'.$slug)?>"><span><?=e($policy[0])?></span><b>Read policy →</b></a><?php endforeach;?></section>
