@@ -29,18 +29,15 @@ $trustPoints = [
     ['title' => 'Licensed Pharmacist', 'description' => 'Every order verified by a qualified pharmacist', 'icon' => '<path d="M12 11c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Z"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 7h2m-1-1v2"/>'],
     ['title' => 'Same-Day Delivery', 'description' => 'Order before 2 PM, get it today across Coimbatore', 'icon' => '<path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'],
     ['title' => 'Genuine Medicines', 'description' => 'Sourced only from licensed distributors', 'icon' => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>'],
-    ['title' => 'Easy Returns', 'description' => 'Hassle-free returns within 7 days if sealed', 'icon' => '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>'],
+    ['title' => 'Order Support', 'description' => 'Contact the pharmacy about wrong, damaged or expired items', 'icon' => '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>'],
 ];
 $steps = [
     ['number' => '01', 'title' => 'Search or browse', 'description' => 'Find your medicine by name, salt, or category. Use the search bar or browse the counter.'],
     ['number' => '02', 'title' => 'Upload prescription', 'description' => 'Prescription medicines need a valid Rx. Upload a photo — our pharmacist verifies it before dispatch.'],
     ['number' => '03', 'title' => 'Get it delivered', 'description' => 'Same-day dispatch before 2 PM. Free delivery on orders above ₹499 across Coimbatore.'],
 ];
-$testimonials = [
-    ['name' => 'Priya R.', 'area' => 'Saibaba Colony', 'text' => 'I have been ordering from Genezenz for over a year. The pharmacist always calls to confirm my diabetes medicines — that personal touch means a lot.'],
-    ['name' => 'Karthik M.', 'area' => 'RS Puram', 'text' => 'Fastest delivery I have seen for a local pharmacy. Ordered Paracetamol and vitamins at 11 AM, got them by 3 PM. Prices are fair too.'],
-    ['name' => 'Lakshmi S.', 'area' => 'Ganapathy', 'text' => 'As a new mother, I rely on them for baby care products. They never send substitutes without asking first. Very trustworthy pharmacy.'],
-];
+// Populate only with customer-approved reviews; never publish sample endorsements.
+$testimonials = [];
 ?>
 <script type="application/ld+json" nonce="<?= csp_nonce() ?>"><?= json_encode($faqSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
 
@@ -58,12 +55,13 @@ $testimonials = [
         <a class="promo-slide" href="<?= app_url($href) ?>">
           <picture>
             <source media="(max-width: 767px)" srcset="<?= asset('images/banners/banner-' . $name . '-mobile.webp') ?>" type="image/webp">
-            <img src="<?= asset('images/banners/banner-' . $name . '-desktop.webp') ?>" width="1600" height="800" alt="<?= e($alt) ?>">
+            <img src="<?= asset('images/banners/banner-' . $name . '-desktop.webp') ?>" width="1600" height="800" alt="<?= e($alt) ?>" loading="<?= $name === 'welcome' ? 'eager' : 'lazy' ?>" fetchpriority="<?= $name === 'welcome' ? 'high' : 'low' ?>" decoding="async">
           </picture>
         </a>
       <?php endforeach; ?>
     </div>
     <div class="promo-dots" role="group" aria-label="Choose promotion">
+      <button type="button" class="promo-pause" data-carousel-pause aria-label="Pause automatic promotions" aria-pressed="false">Ⅱ</button>
       <?php foreach ($banners as $index => $_): ?><button type="button" aria-label="Show promotion <?= $index + 1 ?>" aria-current="<?= $index === 0 ? 'true' : 'false' ?>" data-slide="<?= $index ?>"><span></span></button><?php endforeach; ?>
     </div>
   </div>
@@ -144,6 +142,7 @@ $testimonials = [
 </section>
 <?php endif; ?>
 
+<?php if ($testimonials !== []): ?>
 <section class="section-space testimonials">
   <div class="container">
     <header class="section-heading"><p class="rule-label">Local trust</p><h2>What our customers say</h2></header>
@@ -155,6 +154,7 @@ $testimonials = [
   </div>
 </section>
 
+<?php endif; ?>
 <section class="about-band section-border section-space">
   <div class="container prose-narrow"><p class="rule-label">About the shop</p><h2>Trusted medicine delivery across Coimbatore</h2><p>Genezenz Pharmacy has served families in Ganapathy and greater Coimbatore since <?= e($site['founded']) ?>. We stock medicines and everyday healthcare products across pain relief, diabetes care, vitamins, baby care and more.</p><p>Every prescription order is reviewed by a pharmacist before it leaves our counter. We call if the prescription needs clarification and never substitute a medicine without asking first.</p><p>Place your order before <?= e($site['offers']['dispatch_cutoff']) ?> for same-day dispatch. Delivery is free on orders above <?= money($site['offers']['free_delivery_above']) ?>.</p></div>
 </section>

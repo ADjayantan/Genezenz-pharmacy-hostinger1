@@ -20,7 +20,10 @@ function app_url(string $path = '/'): string
 
 function asset(string $path): string
 {
-    return app_url('/assets/' . ltrim($path, '/'));
+    $path = ltrim($path, '/');
+    $file = PUBLIC_PATH . '/assets/' . $path;
+    $version = is_file($file) ? (string) filemtime($file) : '1';
+    return app_url('/assets/' . $path) . '?v=' . rawurlencode($version);
 }
 
 function csrf_field(): string

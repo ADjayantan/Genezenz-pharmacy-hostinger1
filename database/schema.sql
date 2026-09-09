@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS orders (
   pincode VARCHAR(10) NULL,
   notes TEXT NULL,
   payment_method VARCHAR(40) NOT NULL DEFAULT 'COD',
+  requires_prescription TINYINT(1) NOT NULL DEFAULT 0,
   courier VARCHAR(120) NULL,
   tracking_id VARCHAR(190) NULL,
   tracking_url VARCHAR(2048) NULL,

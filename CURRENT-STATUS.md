@@ -1,6 +1,6 @@
-# Migration checkpoint — 2026-09-05
+# Migration status — 2026-09-06
 
-This repository contains an incomplete integration checkpoint, not a production release.
+This repository has received tested safety, upload and performance improvements. It still is not a production release. Read `DELIVERY-READINESS.md` for current evidence and remaining handover requirements.
 
 ## What is saved
 
@@ -11,10 +11,10 @@ This repository contains an incomplete integration checkpoint, not a production 
 
 ## Required before hosting
 
-1. Enforce prescription requirements in the order transaction, verify upload ownership, link the prescription to the order, and block dispatch until pharmacist approval. The current order backend does not enforce this requirement.
-2. Add a JSON prescription upload API and integrate it with checkout. Existing standalone upload storage is not equivalent to the requested integrated API workflow.
-3. Add secure direct product-image upload and a gallery in admin. Current product editing supports an image URL only.
-4. Improve database search suggestions and related results; the current endpoint returns an empty `related` list.
+1. Implemented and database-tested: Rx requirement, ownership, unused/non-rejected upload checks, atomic order linking, stored Rx requirement and pharmacist approval before progression. Apply the new database migration on existing installations.
+2. Implemented: JSON multipart prescription upload API and checkout upload/selection. API uploads, encryption, CSRF and ownership were HTTP-tested; the combined checkout UI still needs a full staging acceptance run.
+3. Implemented and HTTP-tested: direct primary product-image upload, validation, resize/WebP conversion and cleanup after failed save. Multiple-image gallery remains pending.
+4. Implemented and tested: bounded database search, matching by name/brand/composition/description/category/tags, related OTC suggestions and keyboard navigation.
 5. Complete visual integration of the new design and verify hero controls, mobile layout and keyboard access.
 6. Restore remaining old-site features: back-in-stock requests, buy again, appropriate product recommendations, product-aware chat, customer detail, richer analytics/invoices and tracking details.
 7. Finish SEO hardening: confirmed canonical domain, aligned redirects/robots/sitemap, private-page noindex, truthful location markup and legacy policy redirects.

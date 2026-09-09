@@ -15,7 +15,7 @@ Production-targeted rewrite of the original Next.js pharmacy for PHP 8.2+, MySQL
 
 ## Hostinger requirements
 
-- PHP 8.2+ with `pdo_mysql`, `openssl`, `fileinfo`, `curl`, `mbstring` and `json`.
+- PHP 8.2+ with `pdo_mysql`, `openssl`, `fileinfo`, `gd` (including WebP), `curl`, `mbstring` and `json`.
 - MySQL 8 compatible/MariaDB database using InnoDB.
 - Apache rewrite/headers support, SSL and cron jobs.
 - A writable private directory outside the public document root.
@@ -52,7 +52,17 @@ If the purchased plan lacks PHP, MySQL, cron or storage outside `public_html`, d
    powershell -File tests/http-smoke.ps1 -BaseUrl http://127.0.0.1:8090
    ```
 
-Without MySQL, public catalogue pages deliberately use the eight-item fallback only for layout preview. Login, leads, checkout and uploads fail safely instead of pretending data was saved.
+Only explicit `APP_ENV=local` permits the sample catalogue fallback for layout preview. Other environments return HTTP 503 if MySQL is unavailable. Production never silently serves sample stock/prices after a database failure.
+
+## Updating an existing database
+
+Back up first. Before deploying the new order code, apply `database/migrations/001-order-prescription.sql` once through phpMyAdmin or the MySQL client. Fresh installations use `schema.sql` and must not apply this migration again. The new `orders.requires_prescription` column preserves the Rx requirement even if product settings change later. Historical Rx orders without a linked prescription will need staff remediation before progressing; do not turn the protection off.
+
+Product image uploads require the PHP user to write to `public_html/uploads/products/`. Customer prescriptions remain in `private_uploads/`. Product photos are limited to 5 MB/12 megapixels and converted to WebP at a maximum 1600 pixels per side. The editor currently supports one primary image; a multi-image gallery remains pending.
+
+Set `upload_max_filesize=8M`, `post_max_size=10M` or higher, `memory_limit=128M` or higher, and enable OPcache in the hosting panel. Both PHP CLI and the website's PHP configuration must be checked because they may differ.
+
+Run `php scripts/hosting-preflight.php` on the target host. Keep `SEO_INDEXING_ENABLED=false` during staging. Enable it only after domain, approved content, redirects, robots/sitemap and live checks are completed.
 
 ## Hostinger staging deployment
 

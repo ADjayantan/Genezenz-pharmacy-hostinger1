@@ -62,7 +62,7 @@ final class ProductRepository
                 $this->fallback['products'],
                 static function (array $product) use ($query, $category): bool {
                     $haystack = strtolower(implode(' ', array_filter([
-                        $product['name'], $product['brand'], $product['salt_name'], $product['description'],
+                        $product['name'], $product['brand'], $product['salt_name'], $product['description'], $product['category_name'] ?? '', $product['category_slug'] ?? '',
                     ])));
                     $matchesQuery = $query === '' || str_contains($haystack, strtolower($query));
                     $matchesCategory = $category === '' || $product['category_slug'] === $category;
@@ -74,12 +74,14 @@ final class ProductRepository
         $where = ['p.published = 1'];
         $params = [];
         if ($query !== '') {
-            $where[] = '(p.name LIKE :query_name OR p.brand LIKE :query_brand OR p.salt_name LIKE :query_salt OR p.description LIKE :query_description)';
+            $where[] = '(p.name LIKE :query_name OR p.brand LIKE :query_brand OR p.salt_name LIKE :query_salt OR p.description LIKE :query_description OR c.name LIKE :query_category OR EXISTS (SELECT 1 FROM product_tags t WHERE t.product_id=p.id AND t.tag LIKE :query_tag))';
             $like = '%' . $query . '%';
             $params['query_name'] = $like;
             $params['query_brand'] = $like;
             $params['query_salt'] = $like;
             $params['query_description'] = $like;
+            $params['query_category'] = $like;
+            $params['query_tag'] = $like;
         }
         if ($category !== '') {
             $where[] = 'c.slug = :category';
@@ -135,7 +137,37 @@ final class ProductRepository
             return [];
         }
 
-        return array_slice($this->catalogue($query), 0, $limit);
+        if ($length > 100) return [];
+        $limit = max(1, min(12, $limit));
+        if (!$this->database) return array_slice($this->catalogue($query), 0, $limit);
+        // Return only fields displayed by autocomplete; never materialise the whole catalogue.
+        $s = $this->database->prepare(
+            'SELECT p.id,p.name,p.slug,p.price,p.brand,p.stock,p.rx_required,c.slug category_slug,c.name category_name
+             FROM products p LEFT JOIN categories c ON c.id=p.category_id
+             WHERE p.published=1 AND
+               (p.name LIKE :name OR p.brand LIKE :brand OR p.salt_name LIKE :salt OR p.description LIKE :description OR c.name LIKE :category
+                OR EXISTS (SELECT 1 FROM product_tags t WHERE t.product_id=p.id AND t.tag LIKE :tag))
+             ORDER BY (LOWER(p.name)=LOWER(:exact)) DESC, (p.name LIKE :prefix) DESC, (p.stock>0) DESC, p.name ASC
+             LIMIT :limit'
+        );
+        foreach (['name','brand','salt','description','category','tag'] as $key) $s->bindValue(':'.$key, '%'.$query.'%');
+        $s->bindValue(':exact', $query);
+        $s->bindValue(':prefix', $query.'%');
+        $s->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $s->execute();
+        return $s->fetchAll();
+    }
+
+    public function relatedToSearch(array $matches, int $limit = 3): array
+    {
+        if (!$this->database || $matches === []) return [];
+        $categories = array_values(array_unique(array_filter(array_column($matches, 'category_slug'))));
+        if ($categories === []) return [];
+        $ids = array_map('intval', array_column($matches, 'id'));
+        $sql = 'SELECT p.id,p.name,p.slug,p.price,p.brand,p.stock,p.rx_required FROM products p JOIN categories c ON c.id=p.category_id WHERE p.published=1 AND p.stock>0 AND p.rx_required=0 AND c.slug IN ('.implode(',', array_fill(0,count($categories),'?')).') AND p.id NOT IN ('.implode(',',array_fill(0,count($ids),'?')).') ORDER BY p.name LIMIT '.max(1,min(3,$limit));
+        $s = $this->database->prepare($sql);
+        $s->execute(array_merge($categories,$ids));
+        return $s->fetchAll();
     }
 
     /** @return array<int,array<string,mixed>> */

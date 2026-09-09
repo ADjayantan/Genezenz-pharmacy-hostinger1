@@ -1,9 +1,3 @@
 User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /cart
-Disallow: /checkout
-Disallow: /profile
-
-Sitemap: https://www.genezenz-pharmacy.in/sitemap.xml
+# Fallback for servers without rewriting: configure PHP routing before launch.
+Disallow: /

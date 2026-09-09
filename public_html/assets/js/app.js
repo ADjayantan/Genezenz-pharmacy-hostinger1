@@ -76,6 +76,8 @@ function setupCarousel() {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let index = 0;
   let timer;
+  let paused = reduceMotion;
+  const pauseButton = carousel.querySelector('[data-carousel-pause]');
 
   const go = (next, smooth = true) => {
     index = (next + slides.length) % slides.length;
@@ -84,8 +86,24 @@ function setupCarousel() {
   };
   const restart = () => {
     window.clearInterval(timer);
-    if (!reduceMotion) timer = window.setInterval(() => go(index + 1), 5000);
+    if (!paused && !reduceMotion && !document.hidden && !carousel.contains(document.activeElement) && !carousel.matches(':hover')) timer = window.setInterval(() => go(index + 1), 5000);
   };
+
+  pauseButton?.addEventListener('click', () => {
+    paused = !paused;
+    pauseButton.textContent = paused ? '▶' : 'Ⅱ';
+    pauseButton.setAttribute('aria-pressed', String(paused));
+    pauseButton.setAttribute('aria-label', paused ? 'Resume automatic promotions' : 'Pause automatic promotions');
+    restart();
+  });
+  pauseButton?.setAttribute('aria-pressed', String(paused));
+  if (reduceMotion && pauseButton) {
+    pauseButton.disabled = true;
+    pauseButton.setAttribute('aria-label', 'Automatic promotions disabled by reduced motion preference');
+  }
+  carousel.addEventListener('focusin', () => window.clearInterval(timer));
+  carousel.addEventListener('focusout', () => window.setTimeout(restart, 0));
+  document.addEventListener('visibilitychange', restart);
 
   dots.forEach((dot) => dot.addEventListener('click', () => { go(Number(dot.dataset.slide)); restart(); }));
   track.addEventListener('scrollend', () => {
@@ -119,12 +137,15 @@ function setupSearchBox(box) {
   const close = () => {
     results.hidden = true;
     input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
     active = -1;
   };
   const select = (next) => {
     const options = [...results.querySelectorAll('a')];
     active = Math.max(-1, Math.min(next, options.length - 1));
     options.forEach((option, index) => option.setAttribute('aria-selected', index === active ? 'true' : 'false'));
+    if (active >= 0) input.setAttribute('aria-activedescendant', options[active].id);
+    else input.removeAttribute('aria-activedescendant');
     if (active >= 0) options[active].scrollIntoView({ block: 'nearest' });
   };
 
@@ -145,12 +166,13 @@ function setupSearchBox(box) {
         const matches = Array.isArray(data.matches) ? data.matches : [];
         if (!matches.length) return close();
 
-        results.innerHTML = matches.map((item) => `
-          <li role="option"><a href="/products/${encodeURIComponent(item.slug)}" aria-selected="false">
-            <span><strong>${escapeHtml(item.name)}${item.rxRequired ? ' <small>℞ Prescription</small>' : ''}</strong><small>${escapeHtml(item.brand || '')}</small></span>
+        const related = Array.isArray(data.related) ? data.related : [];
+        results.innerHTML = [...matches, ...related].map((item, index) => `
+          <li role="presentation"><a role="option" id="${input.id}-option-${index}" href="/products/${encodeURIComponent(item.slug)}" aria-selected="false">
+            <span>${index >= matches.length ? '<small>Related product</small>' : ''}<strong>${escapeHtml(item.name)}${item.rxRequired ? ' <small>℞ Prescription</small>' : ''}</strong><small>${escapeHtml(item.brand || '')}</small></span>
             <b>₹${Number(item.price).toFixed(2)}</b>
           </a></li>`).join('') + `
-          <li><a class="search-all" href="/products?q=${encodeURIComponent(query)}">See all results for “${escapeHtml(query)}” →</a></li>`;
+          <li role="presentation"><a role="option" id="${input.id}-all" class="search-all" href="/products?q=${encodeURIComponent(query)}">See all results for “${escapeHtml(query)}” →</a></li>`;
         results.hidden = false;
         input.setAttribute('aria-expanded', 'true');
         active = -1;
@@ -162,6 +184,7 @@ function setupSearchBox(box) {
 
   input.addEventListener('keydown', (event) => {
     const options = [...results.querySelectorAll('a')];
+    if (results.hidden) return;
     if (event.key === 'ArrowDown') { event.preventDefault(); select(active + 1); }
     if (event.key === 'ArrowUp') { event.preventDefault(); select(active - 1); }
     if (event.key === 'Escape') close();
@@ -312,7 +335,27 @@ function setupCheckout() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault(); button.disabled = true; button.textContent = 'Placing order…'; status.textContent = '';
     const data = Object.fromEntries(new FormData(form)); data.items = readCart().map((line) => ({ id: Number(line.id), qty: Number(line.qty) }));
-    try { const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) }); const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Order could not be placed.'); writeCart([]); window.location.assign(result.redirect); }
+    try {
+      const fileInput = form.querySelector('[data-checkout-rx]');
+      const file = fileInput?.files?.[0];
+      if (file) {
+        if (file.size > 8 * 1024 * 1024) throw new Error('Prescription must be 8 MB or smaller.');
+        button.textContent = 'Uploading prescription…';
+        const upload = new FormData();
+        upload.set('_token', data._token);
+        upload.set('prescription', file);
+        const uploaded = await fetch('/api/prescriptions/upload', {method: 'POST', body: upload, headers: {Accept: 'application/json'}});
+        const rx = await uploaded.json();
+        if (!uploaded.ok) throw new Error(rx.message || 'Prescription upload failed.');
+        data.prescription_id = String(rx.id);
+        const select = form.elements.prescription_id;
+        select.add(new Option(file.name + ' — PENDING', String(rx.id), true, true));
+        fileInput.value = '';
+      }
+      if (readCart().some(line => line.rxRequired || line.rx_required) && !data.prescription_id) throw new Error('Choose or upload a prescription for your prescription-only items.');
+      button.textContent = 'Placing order…';
+      const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) }); const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Order could not be placed.'); writeCart([]); window.location.assign(result.redirect);
+    }
     catch (error) { status.textContent = error.message; button.disabled = false; button.textContent = 'Place verified order'; }
   });
 }

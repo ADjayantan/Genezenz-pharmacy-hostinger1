@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $title = $title ?? ($site['name'] . ' — Online Pharmacy in Coimbatore');
 $description = $description ?? $site['description'];
-$canonical = $canonical ?? app_url('/');
+$canonical = $canonical ?? app_url(rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/') ?: '/');
 $gaId = \App\Core\Env::get('GA_ID');
 $gscVerification = \App\Core\Env::get('GSC_VERIFICATION');
 $schema = [
@@ -41,8 +41,10 @@ $schema = [
   <title><?= e($title) ?></title>
   <link rel="canonical" href="<?= e($canonical) ?>">
   <link rel="icon" href="<?= asset('images/logo.png') ?>" type="image/png">
-  <link rel="preload" href="<?= asset('images/banners/banner-welcome-desktop.webp') ?>" as="image" type="image/webp" media="(min-width: 768px)">
-  <link rel="preload" href="<?= asset('images/banners/banner-welcome-mobile.webp') ?>" as="image" type="image/webp" media="(max-width: 767px)">
+  <?php if ((parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/') === '/'): ?>
+    <link rel="preload" href="<?= asset('images/banners/banner-welcome-desktop.webp') ?>" as="image" type="image/webp" media="(min-width: 768px)">
+    <link rel="preload" href="<?= asset('images/banners/banner-welcome-mobile.webp') ?>" as="image" type="image/webp" media="(max-width: 767px)">
+  <?php endif; ?>
   <link rel="stylesheet" href="<?= asset('css/site.css') ?>">
   <script type="application/ld+json" nonce="<?= csp_nonce() ?>"><?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
   <script type="module" src="<?= asset('js/app.js') ?>"></script>

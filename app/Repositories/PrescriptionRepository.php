@@ -13,10 +13,22 @@ final class PrescriptionRepository
     private const ALLOWED=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/heic'=>'heic','image/heif'=>'heic','application/pdf'=>'pdf'];
     public function __construct(private readonly ?PDO $database) {}
 
+    public function availableForOrder(int $userId): array
+    {
+        if (!$this->database) return [];
+        $statement = $this->database->prepare("SELECT id,original_name,status FROM prescriptions WHERE user_id=:user AND order_id IS NULL AND status IN ('PENDING','APPROVED') ORDER BY created_at DESC LIMIT 100");
+        $statement->execute(['user' => $userId]);
+        return $statement->fetchAll();
+    }
+
     public function store(int $userId, array $file, array $fields): int
     {
         if(!$this->database) throw new RuntimeException('Database is not configured.');
         if(($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK) throw new RuntimeException('Choose a prescription file.');
+        if (!is_string($file['tmp_name'] ?? null) || !is_uploaded_file($file['tmp_name'])) throw new RuntimeException('Invalid upload.');
+        foreach (['patient_name' => 80, 'doctor_name' => 80, 'notes' => 1000] as $field => $maximum) {
+            if (strlen((string) ($fields[$field] ?? '')) > $maximum) throw new RuntimeException('Prescription details are too long.');
+        }
         $size=(int)($file['size']??0); if($size<1||$size>8*1024*1024) throw new RuntimeException('Prescription must be 8 MB or smaller.');
         if(!function_exists('finfo_open')) throw new RuntimeException('Host must enable the fileinfo PHP extension.');
         $finfo=finfo_open(FILEINFO_MIME_TYPE); $mime=(string)finfo_file($finfo,(string)$file['tmp_name']); finfo_close($finfo);
@@ -29,10 +41,11 @@ final class PrescriptionRepository
         $storage=bin2hex(random_bytes(24)).'.rx'; $dir=BASE_PATH.'/private_uploads'; if(!is_dir($dir)&&!mkdir($dir,0700,true)) throw new RuntimeException('Private upload directory is unavailable.');
         if(file_put_contents($dir.'/'.$storage,'GZRX1'.$iv.$tag.$cipher,LOCK_EX)===false) throw new RuntimeException('Could not store the upload.');
         try {
+            $this->database->beginTransaction();
             $s=$this->database->prepare('INSERT INTO prescriptions(user_id,storage_key,mime_type,size_bytes,original_name,patient_name,doctor_name,notes) VALUES(:user,:key,:mime,:size,:original,:patient,:doctor,:notes)');
             $s->execute(['user'=>$userId,'key'=>$storage,'mime'=>$mime,'size'=>$size,'original'=>substr(basename((string)$file['name']),0,255),'patient'=>$fields['patient_name']?:null,'doctor'=>$fields['doctor_name']?:null,'notes'=>$fields['notes']?:null]);
-            $id=(int)$this->database->lastInsertId(); $this->database->prepare("INSERT INTO prescription_events(prescription_id,status,note) VALUES(:id,'PENDING','Uploaded by customer')")->execute(['id'=>$id]); return $id;
-        } catch(\Throwable $e) { @unlink($dir.'/'.$storage); throw $e; }
+            $id=(int)$this->database->lastInsertId(); $this->database->prepare("INSERT INTO prescription_events(prescription_id,status,note) VALUES(:id,'PENDING','Uploaded by customer')")->execute(['id'=>$id]); $this->database->commit(); return $id;
+        } catch(\Throwable $e) { if($this->database->inTransaction())$this->database->rollBack(); @unlink($dir.'/'.$storage); throw $e; }
     }
 
     /** @return array<int,array<string,mixed>> */

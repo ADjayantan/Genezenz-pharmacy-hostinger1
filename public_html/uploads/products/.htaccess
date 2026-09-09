@@ -1,0 +1,8 @@
+Options -Indexes
+<FilesMatch "\.(?i:php[0-9]?|phtml|phar|cgi|pl|html?|svg|js)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header set Cache-Control "public, max-age=604800"
+</IfModule>

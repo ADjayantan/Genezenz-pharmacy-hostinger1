@@ -11,7 +11,7 @@ use App\Repositories\ProductRepository;
 
 final class ProductsController
 {
-    public function __construct(private readonly ProductRepository $products)
+    public function __construct(private readonly ProductRepository $products, private readonly ?\App\Core\RateLimiter $limiter = null)
     {
     }
 
@@ -65,7 +65,10 @@ final class ProductsController
     public function search(Request $request): Response
     {
         $query = trim((string) ($request->query['q'] ?? ''));
-        $matches = array_map(static fn (array $product): array => [
+        if (strlen($query) < 2 || strlen($query) > 100) return Response::json(['matches' => [], 'related' => []]);
+        if ($this->limiter && !$this->limiter->allow('search', $request->ip(), 90, 60)) return Response::json(['message' => 'Search limit reached. Please try again shortly.'], 429);
+        $records = $this->products->search($query);
+        $map = static fn (array $product): array => [
             'id' => (string) $product['id'],
             'name' => $product['name'],
             'slug' => $product['slug'],
@@ -73,8 +76,8 @@ final class ProductsController
             'brand' => $product['brand'],
             'stock' => (int) $product['stock'],
             'rxRequired' => (bool) $product['rx_required'],
-        ], $this->products->search($query));
+        ];
 
-        return Response::json(['matches' => $matches, 'related' => []]);
+        return Response::json(['matches' => array_map($map, $records), 'related' => array_map($map, $this->products->relatedToSearch($records))]);
     }
 }

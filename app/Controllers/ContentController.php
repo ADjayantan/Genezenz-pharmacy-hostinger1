@@ -9,6 +9,14 @@ use App\Core\Request;use App\Core\Response;use App\Core\View;use App\Repositorie
 final class ContentController
 {
     public function __construct(private readonly ProductRepository $products) {}
+    public function robots(): Response
+    {
+        $enabled = \App\Core\Env::get('APP_ENV', 'production') === 'production'
+            && filter_var(\App\Core\Env::get('SEO_INDEXING_ENABLED', 'false'), FILTER_VALIDATE_BOOL);
+        $body = "User-agent: *\nAllow: /\n";
+        if ($enabled && filter_var(app_url('/'), FILTER_VALIDATE_URL)) $body .= "\nSitemap: ".app_url('/sitemap.xml')."\n";
+        return new Response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8', 'Cache-Control' => 'no-store']);
+    }
     public function page(Request $request):Response{$pages=require BASE_PATH.'/app/Config/content.php';$key=trim($request->path,'/');if(!isset($pages[$key]))return Response::html(View::render('errors/404',['title'=>'Page not found']),404);return Response::html(View::render('content/page',['title'=>$pages[$key][0].' — Genezenz Pharmacy','heading'=>$pages[$key][0],'eyebrow'=>$pages[$key][1],'paragraphs'=>array_slice($pages[$key],2)]));}
     public function legalIndex():Response{$legal=require BASE_PATH.'/app/Config/legal.php';return Response::html(View::render('content/legal-index',['title'=>'Legal & pharmacy policies — Genezenz Pharmacy','policies'=>$legal]));}
     public function legal(Request $request):Response{$legal=require BASE_PATH.'/app/Config/legal.php';$slug=(string)$request->params['slug'];if(!isset($legal[$slug]))return Response::html(View::render('errors/404',['title'=>'Policy not found']),404);return Response::html(View::render('content/page',['title'=>$legal[$slug][0].' — Genezenz Pharmacy','heading'=>$legal[$slug][0],'eyebrow'=>'Legal & pharmacy policy','paragraphs'=>array_slice($legal[$slug],1)]));}

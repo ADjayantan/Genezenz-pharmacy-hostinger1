@@ -26,6 +26,9 @@ require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . '
 
 $catalog = require BASE_PATH . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR . 'catalog.php';
 $database = Database::tryConnection();
+if (!$database && \App\Core\Env::get('APP_ENV', 'production') !== 'local') {
+    (new \App\Core\Response('<h1>Temporarily unavailable</h1><p>Please try again shortly.</p>', 503, ['Content-Type' => 'text/html; charset=UTF-8', 'Retry-After' => '300', 'Cache-Control' => 'no-store', 'X-Robots-Tag' => 'noindex']))->send();
+}
 Auth::initialize($database);
 $products = new ProductRepository($database, $catalog);
 $users = new UserRepository($database);
@@ -35,7 +38,7 @@ $leads = new LeadRepository($database);
 $limiter = new RateLimiter($database);
 
 $homeController = new HomeController($products);
-$productsController = new ProductsController($products);
+$productsController = new ProductsController($products, $limiter);
 $leadController = new LeadController($leads, $limiter);
 $authController = new AuthController($users, $limiter);
 $shopController = new ShopController($orders, $prescriptions, $limiter);
@@ -62,6 +65,7 @@ $router->get('/profile', [$shopController, 'profile']);
 $router->get('/order/{orderNo}', [$shopController, 'order']);
 $router->get('/upload-prescription', [$prescriptionController, 'page']);
 $router->post('/upload-prescription', [$prescriptionController, 'store']);
+$router->post('/api/prescriptions/upload', [$prescriptionController, 'store']);
 $router->get('/api/prescriptions/file/{id}', [$prescriptionController, 'file']);
 $router->get('/about', [$contentController, 'page']);
 $router->get('/contact', [$contentController, 'page']);
@@ -70,6 +74,7 @@ $router->get('/legal', [$contentController, 'legalIndex']);
 $router->get('/legal/{slug}', [$contentController, 'legal']);
 $router->get('/pharmacy-in-{area}-coimbatore', [$contentController, 'area']);
 $router->get('/sitemap.xml', [$contentController, 'sitemap']);
+$router->get('/robots.txt', [$contentController, 'robots']);
 $router->get('/admin/login', [$adminController, 'loginPage']);
 $router->get('/admin', [$adminController, 'dashboard']);
 $router->get('/admin/{section}', [$adminController, 'list']);
